@@ -38,7 +38,18 @@ A production-ready SaaS application built with Next.js 14, TypeScript, Prisma, P
 - Vercel (hosting)
 - Supabase (database)
 
+## 📚 Documentation
+
+Choose your path:
+
+- **🚀 [QUICKSTART.md](./QUICKSTART.md)** - Get deployed in under 2 hours (recommended for beginners)
+- **📖 [GETTING_STARTED.md](./GETTING_STARTED.md)** - Comprehensive step-by-step guide with explanations
+- **☁️ [DEPLOYMENT.md](./DEPLOYMENT.md)** - Detailed production deployment guide
+- **✅ [PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md)** - Pre-launch checklist
+
 ## Quick Start
+
+**Want to get started immediately?** Follow our [QUICKSTART.md](./QUICKSTART.md) guide!
 
 ### Prerequisites
 
@@ -52,8 +63,8 @@ A production-ready SaaS application built with Next.js 14, TypeScript, Prisma, P
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/your-username/tradeflow.git
-cd tradeflow
+git clone https://github.com/Sajeevanveeriah/TradeFlow.git
+cd TradeFlow
 ```
 
 2. **Install dependencies**
@@ -106,12 +117,20 @@ npm run prisma:migrate
 npm run prisma:studio
 ```
 
-5. **Run the development server**
+5. **Validate your environment**
+```bash
+# Check if everything is configured correctly
+npm run validate-env
+```
+
+6. **Run the development server**
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+**Need help?** See the [QUICKSTART.md](./QUICKSTART.md) guide for a step-by-step walkthrough.
 
 ## Project Structure
 
@@ -366,9 +385,9 @@ npm run build
 ## Support
 
 For issues and questions:
-- Email: support@tradeflow.com.au
-- Documentation: https://docs.tradeflow.com.au
-- GitHub Issues: https://github.com/your-username/tradeflow/issues
+- GitHub Issues: https://github.com/Sajeevanveeriah/TradeFlow/issues
+- GitHub Discussions: https://github.com/Sajeevanveeriah/TradeFlow/discussions
+- Email: Open an issue on GitHub for fastest response
 
 ## License
 
@@ -376,7 +395,14 @@ Proprietary - All rights reserved
 
 ## Contributing
 
-This is a commercial SaaS product. If you're interested in contributing or partnering, please contact us at hello@tradeflow.com.au
+This is a SaaS application. Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+For major changes, please open an issue first to discuss what you would like to change.
 
 ---
 
