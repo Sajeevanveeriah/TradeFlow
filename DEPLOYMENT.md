@@ -334,8 +334,8 @@ As your user base grows:
 ## Support
 
 For deployment issues:
-- Email: support@tradeflow.com.au
-- GitHub: https://github.com/your-username/tradeflow/issues
+- GitHub Issues: https://github.com/Sajeevanveeriah/TradeFlow/issues
+- GitHub Discussions: https://github.com/Sajeevanveeriah/TradeFlow/discussions
 
 ---
 

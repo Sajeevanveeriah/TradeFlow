@@ -12,7 +12,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:push": "prisma db push",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "validate-env": "node scripts/validate-env.js",
+    "setup": "npm install && npm run prisma:generate && npm run validate-env"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
