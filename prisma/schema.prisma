@@ -1,0 +1,454 @@
+// TradeFlow Database Schema
+// PostgreSQL with Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// USER & AUTHENTICATION
+// ==========================================
+
+model User {
+  id                   String   @id @default(uuid())
+  email                String   @unique
+  password             String
+  phone                String?
+  businessName         String?  @map("business_name")
+  tradeType            String?  @map("trade_type") // electrician, plumber, carpenter, hvac, etc.
+  abn                  String?  @unique // Australian Business Number
+
+  // Subscription & Billing
+  subscriptionTier     SubscriptionTier    @default(STARTER) @map("subscription_tier")
+  subscriptionStatus   SubscriptionStatus  @default(TRIAL) @map("subscription_status")
+  stripeCustomerId     String?  @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
+  trialEndsAt          DateTime? @map("trial_ends_at")
+  subscriptionEndsAt   DateTime? @map("subscription_ends_at")
+
+  // Profile
+  avatar               String?
+  address              String?
+  city                 String?
+  state                String?
+  postcode             String?
+  lat                  Float?
+  lng                  Float?
+
+  // Settings
+  timezone             String   @default("Australia/Sydney")
+  workingHoursStart    Int      @default(8) @map("working_hours_start") // 24h format
+  workingHoursEnd      Int      @default(17) @map("working_hours_end")
+  workingDays          String[] @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]) @map("working_days")
+
+  // Notifications
+  emailNotifications   Boolean  @default(true) @map("email_notifications")
+  smsNotifications     Boolean  @default(true) @map("sms_notifications")
+
+  // Timestamps
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  lastLoginAt          DateTime? @map("last_login_at")
+
+  // Relations
+  customers            Customer[]
+  bookings             Booking[]
+  quotes               Quote[]
+  payments             Payment[]
+  teamMembers          TeamMember[]
+
+  @@map("users")
+  @@index([email])
+  @@index([subscriptionStatus])
+}
+
+enum SubscriptionTier {
+  STARTER      // $29/month - Solo tradie
+  PROFESSIONAL // $59/month - Advanced features
+  PREMIUM      // $99/month - Team features
+}
+
+enum SubscriptionStatus {
+  TRIAL        // 14-day free trial
+  ACTIVE       // Paying customer
+  PAST_DUE     // Payment failed
+  CANCELLED    // Cancelled subscription
+  EXPIRED      // Trial expired
+}
+
+// ==========================================
+// CUSTOMERS (CRM)
+// ==========================================
+
+model Customer {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Basic Info
+  name              String
+  email             String?
+  phone             String
+
+  // Address & Location
+  address           String?
+  suburb            String?
+  city              String?
+  state             String?
+  postcode          String?
+  lat               Float?
+  lng               Float?
+
+  // Additional Info
+  notes             String?  @db.Text
+  propertyType      String?  @map("property_type") // residential, commercial
+  preferredContact  String?  @default("phone") @map("preferred_contact") // phone, email, sms
+
+  // Tags for segmentation
+  tags              String[]
+
+  // Timestamps
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  lastContactedAt   DateTime? @map("last_contacted_at")
+
+  // Relations
+  bookings          Booking[]
+  quotes            Quote[]
+
+  @@map("customers")
+  @@index([userId])
+  @@index([email])
+  @@index([phone])
+}
+
+// ==========================================
+// BOOKINGS / JOBS
+// ==========================================
+
+model Booking {
+  id                   String   @id @default(uuid())
+  userId               String   @map("user_id")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId           String   @map("customer_id")
+  customer             Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Job Details
+  title                String
+  description          String?  @db.Text
+  jobType              String?  @map("job_type") // installation, repair, maintenance, inspection
+  status               BookingStatus @default(SCHEDULED)
+  priority             Priority @default(NORMAL)
+
+  // Scheduling
+  scheduledStart       DateTime @map("scheduled_start")
+  scheduledEnd         DateTime @map("scheduled_end")
+  actualStart          DateTime? @map("actual_start")
+  actualEnd            DateTime? @map("actual_end")
+  allDay               Boolean  @default(false) @map("all_day")
+
+  // Location
+  address              String?
+  suburb               String?
+  city                 String?
+  state                String?
+  postcode             String?
+  lat                  Float?
+  lng                  Float?
+  travelTimeMinutes    Int?     @map("travel_time_minutes")
+  travelDistanceKm     Float?   @map("travel_distance_km")
+
+  // Financial
+  estimatedCost        Float?   @map("estimated_cost")
+  actualCost           Float?   @map("actual_cost")
+  depositAmount        Float?   @map("deposit_amount")
+  depositPaid          Boolean  @default(false) @map("deposit_paid")
+
+  // Materials & Notes
+  materialsNeeded      String?  @db.Text @map("materials_needed")
+  internalNotes        String?  @db.Text @map("internal_notes")
+  customerNotes        String?  @db.Text @map("customer_notes")
+
+  // Team Assignment (Premium tier)
+  assignedToId         String?  @map("assigned_to_id")
+  assignedTo           TeamMember? @relation(fields: [assignedToId], references: [id])
+
+  // Reminders
+  reminderSent         Boolean  @default(false) @map("reminder_sent")
+  reminderSentAt       DateTime? @map("reminder_sent_at")
+
+  // Timestamps
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  completedAt          DateTime? @map("completed_at")
+  cancelledAt          DateTime? @map("cancelled_at")
+  cancellationReason   String?  @map("cancellation_reason")
+
+  // Relations
+  quote                Quote?
+  reminders            Reminder[]
+  payments             Payment[]
+
+  @@map("bookings")
+  @@index([userId])
+  @@index([customerId])
+  @@index([scheduledStart])
+  @@index([status])
+  @@index([assignedToId])
+}
+
+enum BookingStatus {
+  SCHEDULED    // Confirmed and scheduled
+  IN_PROGRESS  // Currently working on it
+  COMPLETED    // Job finished
+  CANCELLED    // Cancelled by tradie or customer
+  NO_SHOW      // Customer didn't show up
+  PENDING      // Awaiting confirmation
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// ==========================================
+// QUOTES
+// ==========================================
+
+model Quote {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId        String   @map("customer_id")
+  customer          Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  bookingId         String?  @unique @map("booking_id")
+  booking           Booking? @relation(fields: [bookingId], references: [id])
+
+  // Quote Details
+  quoteNumber       String   @unique @map("quote_number") // QT-2024-0001
+  title             String
+  description       String?  @db.Text
+
+  // Line Items (JSONB for flexibility)
+  lineItems         Json     @map("line_items")
+  // Structure: [{ description: string, quantity: number, unitPrice: number, total: number, notes?: string }]
+
+  // Pricing
+  subtotal          Float
+  taxRate           Float    @default(10.0) @map("tax_rate") // Australian GST 10%
+  taxAmount         Float    @map("tax_amount")
+  discountAmount    Float    @default(0) @map("discount_amount")
+  total             Float
+
+  // Status & Validity
+  status            QuoteStatus @default(DRAFT)
+  validUntil        DateTime? @map("valid_until")
+
+  // Terms & Conditions
+  terms             String?  @db.Text
+  notes             String?  @db.Text
+
+  // Payment Terms
+  depositPercentage Int?     @default(0) @map("deposit_percentage")
+  depositAmount     Float?   @map("deposit_amount")
+
+  // Timestamps
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  sentAt            DateTime? @map("sent_at")
+  viewedAt          DateTime? @map("viewed_at")
+  acceptedAt        DateTime? @map("accepted_at")
+  rejectedAt        DateTime? @map("rejected_at")
+  expiresAt         DateTime? @map("expires_at")
+
+  // Relations
+  payments          Payment[]
+
+  @@map("quotes")
+  @@index([userId])
+  @@index([customerId])
+  @@index([quoteNumber])
+  @@index([status])
+}
+
+enum QuoteStatus {
+  DRAFT      // Being prepared
+  SENT       // Sent to customer
+  VIEWED     // Customer viewed it
+  ACCEPTED   // Customer accepted
+  REJECTED   // Customer rejected
+  EXPIRED    // Past valid date
+  CONVERTED  // Converted to booking
+}
+
+// ==========================================
+// PAYMENTS
+// ==========================================
+
+model Payment {
+  id                    String   @id @default(uuid())
+  userId                String   @map("user_id")
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId             String?  @map("booking_id")
+  booking               Booking? @relation(fields: [bookingId], references: [id])
+  quoteId               String?  @map("quote_id")
+  quote                 Quote?   @relation(fields: [quoteId], references: [id])
+
+  // Stripe Integration
+  stripePaymentIntentId String?  @unique @map("stripe_payment_intent_id")
+  stripeChargeId        String?  @unique @map("stripe_charge_id")
+
+  // Payment Details
+  amount                Float
+  currency              String   @default("AUD")
+  status                PaymentStatus @default(PENDING)
+  paymentMethod         String?  @map("payment_method") // card, bank_transfer, cash
+  paymentType           PaymentType @default(FULL) @map("payment_type")
+
+  // Metadata
+  description           String?
+  receiptUrl            String?  @map("receipt_url")
+  failureReason         String?  @map("failure_reason")
+
+  // Timestamps
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  paidAt                DateTime? @map("paid_at")
+  refundedAt            DateTime? @map("refunded_at")
+  refundAmount          Float?   @map("refund_amount")
+
+  @@map("payments")
+  @@index([userId])
+  @@index([bookingId])
+  @@index([quoteId])
+  @@index([stripePaymentIntentId])
+  @@index([status])
+}
+
+enum PaymentStatus {
+  PENDING    // Awaiting payment
+  PROCESSING // Being processed
+  SUCCEEDED  // Successfully paid
+  FAILED     // Payment failed
+  REFUNDED   // Refunded
+  CANCELLED  // Cancelled
+}
+
+enum PaymentType {
+  DEPOSIT    // Partial payment
+  FULL       // Full payment
+  MILESTONE  // Milestone payment
+  REFUND     // Refund
+}
+
+// ==========================================
+// REMINDERS
+// ==========================================
+
+model Reminder {
+  id                String   @id @default(uuid())
+  bookingId         String   @map("booking_id")
+  booking           Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  // Reminder Details
+  reminderType      ReminderType @map("reminder_type")
+  scheduledFor      DateTime @map("scheduled_for")
+  message           String?  @db.Text
+
+  // Status
+  status            ReminderStatus @default(SCHEDULED)
+  sentAt            DateTime? @map("sent_at")
+  deliveredAt       DateTime? @map("delivered_at")
+  failureReason     String?  @map("failure_reason")
+
+  // Provider Info (Twilio/SendGrid)
+  providerId        String?  @map("provider_id")
+  providerResponse  Json?    @map("provider_response")
+
+  // Timestamps
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("reminders")
+  @@index([bookingId])
+  @@index([scheduledFor])
+  @@index([status])
+}
+
+enum ReminderType {
+  SMS
+  EMAIL
+  BOTH
+}
+
+enum ReminderStatus {
+  SCHEDULED  // Scheduled to be sent
+  SENT       // Successfully sent
+  DELIVERED  // Delivered to recipient
+  FAILED     // Failed to send
+  CANCELLED  // Cancelled before sending
+}
+
+// ==========================================
+// TEAM MEMBERS (Premium Tier Feature)
+// ==========================================
+
+model TeamMember {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id") // The business owner
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Member Details
+  name              String
+  email             String?
+  phone             String
+  role              String?  // apprentice, senior, specialist
+
+  // Status
+  isActive          Boolean  @default(true) @map("is_active")
+
+  // Timestamps
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  assignedBookings  Booking[]
+
+  @@map("team_members")
+  @@index([userId])
+  @@index([isActive])
+}
+
+// ==========================================
+// ACTIVITY LOG (For audit trail)
+// ==========================================
+
+model ActivityLog {
+  id                String   @id @default(uuid())
+  userId            String?  @map("user_id")
+
+  // Activity Details
+  entityType        String   @map("entity_type") // booking, quote, payment, customer
+  entityId          String   @map("entity_id")
+  action            String   // created, updated, deleted, sent, etc.
+  changes           Json?    // What changed
+
+  // Metadata
+  ipAddress         String?  @map("ip_address")
+  userAgent         String?  @map("user_agent")
+
+  // Timestamp
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("activity_logs")
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
