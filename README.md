@@ -385,9 +385,8 @@ npm run build
 ## Support
 
 For issues and questions:
-- GitHub Issues: https://github.com/Sajeevanveeriah/TradeFlow/issues
-- GitHub Discussions: https://github.com/Sajeevanveeriah/TradeFlow/discussions
-- Email: Open an issue on GitHub for fastest response
+- **GitHub Issues**: https://github.com/Sajeevanveeriah/TradeFlow/issues
+- **Email Support**: Open an issue on GitHub for fastest response
 
 ## License
 
